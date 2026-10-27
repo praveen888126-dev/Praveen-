@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRAVEEN PRO | ADCA Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,Arial;background:#0b1020;color:#edf2ff}
+.app{display:flex;min-height:100vh}
+aside{width:235px;background:#111a31;padding:24px 15px}
+.logo{font-size:25px;font-weight:900;color:#8b9cff;margin-bottom:35px}
+nav button{display:block;width:100%;margin:9px 0;padding:13px;text-align:left;background:transparent;color:#ccd6f6;border:0;border-radius:10px;cursor:pointer}
+nav button:hover,nav button.active{background:#3847a5;color:white}
+main{flex:1;padding:25px;min-width:0}
+header{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+h1{margin:0;font-size:27px}
+.muted{color:#9aa9c9}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:25px 0}
+.card,.panel{background:#17213b;padding:22px;border-radius:16px;border:1px solid #293657;box-shadow:0 8px 25px #0002}
+.card h2{font-size:29px;margin:8px 0;color:#9eacff}
+.panel{margin-bottom:20px}
+input,select{background:#0d162b;color:white;border:1px solid #394769;padding:12px;border-radius:9px;max-width:100%}
+button.action{background:linear-gradient(120deg,#6266f1,#9b55e7);border:0;border-radius:9px;color:white;padding:12px 18px;cursor:pointer}
+button.action:hover{filter:brightness(1.15)}
+.form{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
+table{width:100%;border-collapse:collapse;min-width:550px}
+th,td{padding:13px;text-align:left;border-bottom:1px solid #35415d}
+th{color:#aabaff}
+.tablewrap{overflow-x:auto}
+.bar{height:12px;background:#303e60;border-radius:20px;overflow:hidden}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,#4ac6f2,#a76af5)}
+.chartrow{display:grid;grid-template-columns:110px 1fr 45px;gap:10px;align-items:center;margin:15px 0}
+.hidden{display:none}
+.light{background:#eef2ff;color:#182342}
+.light aside,.light .card,.light .panel{background:#fff;color:#182342}
+.light input,.light select{background:#f1f4ff;color:#182342}
+.light nav button{color:#344064}
+.light nav button.active{color:white}
+@media(max-width:700px){.app{display:block}aside{width:100%;padding:12px}nav{display:flex;overflow-x:auto}nav button{min-width:120px}main{padding:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+<div class="logo">⚡ PRAVEEN PRO</div>
+<nav>
+<button class="active" onclick="showPage('dashboard',this)">📊 Dashboard</button>
+<button onclick="showPage('students',this)">🎓 Students</button>
+<button onclick="showPage('calculator',this)">🧮 Calculator</button>
+</nav>
+<p class="muted">ADCA Professional Project</p>
+</aside>
+<main>
+<header>
+<div><h1 id="heading">Dashboard</h1><p class="muted">Welcome to Praveen Pro System</p></div>
+<div><span id="clock"></span> <button class="action" onclick="toggleTheme()">☀ Theme</button></div>
+</header>
+
+<section id="dashboard">
+<div class="cards">
+<div class="card">Total Students<h2 id="total">0</h2></div>
+<div class="card">Average Marks<h2 id="average">0%</h2></div>
+<div class="card">Passed Students<h2 id="passed">0</h2></div>
+<div class="card">Highest Marks<h2 id="highest">0%</h2></div>
+</div>
+<div class="panel">
+<h2>📈 Student Performance</h2>
+<div id="chart"></div>
+</div>
+<div class="panel">
+<h2>✨ Project Features</h2>
+<p>Live Dashboard • Student Database • Performance Chart • Search • CSV Export • Dark Mode • Local Storage</p>
+</div>
+</section>
+
+<section id="students" class="hidden">
+<div class="panel">
+<h2>🎓 Student Management</h2>
+<div class="form">
+<input id="name" placeholder="Student Name" maxlength="60">
+<input id="course" placeholder="Course e.g. ADCA" maxlength="40">
+<input id="marks" type="number" placeholder="Marks / 100" min="0" max="100">
+<button class="action" onclick="addStudent()">+ Add Student</button>
+</div>
+<div class="form">
+<input id="search" placeholder="🔍 Search student..." oninput="renderTable()">
+<button class="action" onclick="exportCSV()">⬇ Export CSV</button>
+</div>
+<div class="tablewrap">
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Course</th><th>Marks</th><th>Result</th><th>Action</th></tr></thead>
+<tbody id="studentRows"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section id="calculator" class="hidden">
+<div class="panel">
+<h2>🧮 Percentage Calculator</h2>
+<div class="form">
+<input id="obtained" type="number" placeholder="Obtained Marks">
+<input id="maximum" type="number" placeholder="Total Marks">
+<button class="action" onclick="calculate()">Calculate</button>
+</div>
+<h2 id="answer">Result: --</h2>
+</div>
+</section>
+</main>
+</div>
+
+<script>
+const KEY="praveen_pro_students_v1";
+let students=[];
+try{
+const saved=JSON.parse(localStorage.getItem(KEY));
+students=Array.isArray(saved)?saved:[];
+}catch(e){students=[]}
+
+function save(){
+localStorage.setItem(KEY,JSON.stringify(students));
+render();
+}
+
+function showPage(page,btn){
+["dashboard","students","calculator"].forEach(id=>{
+document.getElementById(id).classList.toggle("hidden",id!==page);
+});
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+btn.classList.add("active");
+document.getElementById("heading").textContent=page[0].toUpperCase()+page.slice(1);
+}
+
+function addStudent(){
+const name=document.getElementById("name").value.trim();
+const course=document.getElementById("course").value.trim();
+const value=document.getElementById("marks").value;
+const marks=Number(value);
+if(!name||!course||value===""||!Number.isFinite(marks)||marks<0||marks>100){
+alert("Enter valid name, course and marks (0-100).");
+return;
+}
+students.push({id:Date.now()+Math.random(),name,course,marks});
+["name","course","marks"].forEach(id=>document.getElementById(id).value="");
+save();
+}
+
+function removeStudent(id){
+if(confirm("Delete this student?")){
+students=students.filter(s=>s.id!==id);
+save();
+}
+}
+
+function renderTable(){
+const q=document.getElementById("search").value.toLowerCase();
+const tbody=document.getElementById("studentRows");
+tbody.replaceChildren();
+students.filter(s=>(s.name+" "+s.course).toLowerCase().includes(q)).forEach((s,i)=>{
+const tr=document.createElement("tr");
+[s.id.toString().slice(-6),s.name,s.course,s.marks+"%",s.marks>=33?"PASS":"FAIL"].forEach(v=>{
+const td=document.createElement("td");
+td.textContent=v;
+tr.appendChild(td);
+});
+const td=document.createElement("td");
+const btn=document.createElement("button");
+btn.textContent="Delete";
+btn.className="action";
+btn.onclick=()=>removeStudent(s.id);
+td.appendChild(btn);
+tr.appendChild(td);
+tbody.appendChild(tr);
+});
+}
+
+function render(){
+const count=students.length;
+const sum=students.reduce((a,s)=>a+s.marks,0);
+document.getElementById("total").textContent=count;
+document.getElementById("average").textContent=count?(sum/count).toFixed(1)+"%":"0%";
+document.getElementById("passed").textContent=students.filter(s=>s.marks>=33).length;
+document.getElementById("highest").textContent=count?Math.max(...students.map(s=>s.marks))+"%":"0%";
+const chart=document.getElementById("chart");
+chart.replaceChildren();
+students.slice(-8).forEach(s=>{
+const row=document.createElement("div");
+row.className="chartrow";
+const label=document.createElement("span");
+label.textContent=s.name;
+const bar=document.createElement("div");
+bar.className="bar";
+const fill=document.createElement("span");
+fill.style.width=s.marks+"%";
+bar.appendChild(fill);
+const value=document.createElement("span");
+value.textContent=s.marks+"%";
+row.append(label,bar,value);
+chart.appendChild(row);
+});
+if(!count)chart.textContent="Add students to see performance charts.";
+renderTable();
+}
+
+function calculate(){
+const a=Number(document.getElementById("obtained").value);
+const b=Number(document.getElementById("maximum").value);
+if(!Number.isFinite(a)||!Number.isFinite(b)||b<=0||a<0||a>b||
+document.getElementById("obtained").value===""||
+document.getElementById("maximum").value===""){
+alert("Enter valid marks and total.");
+return;
+}
+document.getElementById("answer").textContent="Result: "+(a/b*100).toFixed(2)+"%";
+}
+
+function exportCSV(){
+const rows=[["ID","Name","Course","Marks","Result"],...students.map(s=>[s.id,s.name,s.course,s.marks,s.marks>=33?"PASS":"FAIL"])];
+const csv=rows.map(row=>row.map(v=>{
+let str=String(v);
+if(/^[=+\-@\t\r]/.test(str))str="'"+str;
+return '"'+str.replace(/"/g,'""')+'"';
+}).join(",")).join("\r\n");
+const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");
+a.href=url;a.download="Praveen_Students.csv";a.click();
+setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function toggleTheme(){
+document.body.classList.toggle("light");
+localStorage.setItem("praveen_theme",document.body.classList.contains("light")?"light":"dark");
+}
+if(localStorage.getItem("praveen_theme")==="light")document.body.classList.add("light");
+
+function updateClock(){
+document.getElementById("clock").textContent=new Date().toLocaleString("en-IN");
+}
+updateClock();
+setInterval(updateClock,1000);
+render();
+</script>
+</body>
+</html>
